@@ -42,7 +42,7 @@
 #define CANFIG      0b01000000
 #define CANLTR      0b00100000
 
-const uint8_t PROGMEM ascii2baudot[128] = 
+const uint8_t ascii2baudot[128] PROGMEM = 
 { 
     CANFIG|CANLTR|0, //  , hex: 0x00
     0, //  , hex: 0x01
@@ -176,7 +176,7 @@ const uint8_t PROGMEM ascii2baudot[128] =
 
 
 // lower part - LTRS, upper part - FIGS
-const uint8_t PROGMEM baudot2ascii[64] = 
+const uint8_t baudot2ascii[64] PROGMEM = 
 {
        0, //BAUD_NULL    0x00      // Null symbol
      'E', //BAUD_E_3     0x01      // E or 3

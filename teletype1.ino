@@ -47,7 +47,12 @@ int rxThread(struct pt* pt) {
 #ifdef IS_RAW
     Serial.write(x);
 #else
-    Serial.write(x);                              // FIXME: here should be conversion
+    if((x == BAUD_FIGS)||(x==BAUD_LTRS)) {
+        rx_is_in_ltrs = (x==BAUD_LTRS);
+    }else{
+        x = rx_is_in_ltrs?(x):(x|0x20);
+        Serial.write(pgm_read_byte(baudot2ascii+ x));
+    }
 #endif
     digitalWrite(LEDS[TTY_RX_LED], LOW);
   }
@@ -110,12 +115,12 @@ void loop() {
       if( ascii > 127) {
           baudot = 0b00000000;      // ignore symbols, with codes above 127
       }else {
-        baudot = ascii2baudot[ascii]; // perform conversion
-                                      // upper bits (765) - mean:
-                                      // 7 - special
-                                      // 6 - can be in letters
-                                      // 5 - can be in figures
-                                      // when both 5 & 6 are zero - ignore symbol
+        baudot = pgm_read_byte(ascii2baudot + ascii); // perform conversion
+                                                      // upper bits (765) - mean:
+                                                      // 7 - special
+                                                      // 6 - can be in letters
+                                                      // 5 - can be in figures
+                                                      // when both 5 & 6 are zero - ignore symbol
       };
       if( baudot & SPECIAL) {
           // special treatment symbol
