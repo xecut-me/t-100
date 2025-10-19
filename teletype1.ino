@@ -31,7 +31,7 @@ int rxThread(struct pt* pt) {
   PT_BEGIN(pt);
 
   static char x;
-  static int i = 0;
+  static uint8_t i = 0;
 
   // Loop forever
   for(;;) {
@@ -40,14 +40,18 @@ int rxThread(struct pt* pt) {
     digitalWrite(LEDS[TTY_RX_LED], HIGH);
     PT_SLEEP(pt, HALF_BIT);                       // sleep till the middle of start bit (10 ms)
     x = 0;
-    for(i=0;i<5;i++){
+    for(i=0b000001;i!=0b100000;i<<=1){
       PT_SLEEP(pt, HALF_BIT*2);                   // wait till next bit
       if(digitalRead(RXPIN) == HIGH) {            // 1  ---+  +--+--+--+--+--+---   
-        x = x | (1<<i);                           //       |S | 0| 1| 2| 3| 4|STP    - bits are 20ms, stop bit - 30ms
+        x = x | i;                                //       |S | 0| 1| 2| 3| 4|STP    - bits are 20ms, stop bit - 30ms
       };                                          //       +--+--+--+--+--+--+   
     }
     PT_SLEEP(pt, HALF_BIT*4);                     // 1.5 stop bits ( 0.5 bit forward from last bit + 1.5 bits of stop)
+#ifdef IS_RAW
+    Serial.write(x);
+#else
     Serial.write(x);                              // FIXME: here should be conversion
+#endif
     digitalWrite(LEDS[TTY_RX_LED], LOW);
   }
 
@@ -58,7 +62,7 @@ int txThread(struct pt* pt) {
   PT_BEGIN(pt);
 
   static char x;
-  static int i = 0;
+  static uint8_t i = 0;
 
   // Loop forever
   for(;;) {
@@ -67,14 +71,9 @@ int txThread(struct pt* pt) {
     x = queue.pop();
     digitalWrite(TXPIN, LOW);                   // send start bit
     PT_SLEEP(pt, HALF_BIT*2);                   //
-    for(i=0;i<5;i++){
-      if(x & 0x01) {
-        digitalWrite(TXPIN, HIGH);
-      }else{
-        digitalWrite(TXPIN, LOW);
-      }
+    for(i=0b000001;i!=0b100000;i<<=1){
+      digitalWrite(TXPIN, (x & i)?HIGH:LOW);
       PT_SLEEP(pt, HALF_BIT*2);
-      x >>= 1;
     }
     digitalWrite(TXPIN, HIGH);
     digitalWrite(LEDS[TTY_TX_LED], LOW);
