@@ -10,27 +10,24 @@ const char PROGMEM LEDS[4]={A0,A1,A2,A3};
 #define TTY_TX_LED  1
 #define BUFFER_FULL_LED 2
 
-
-#define LTRS    0x1f
-#define FIGS    0x1b
-
 // if defined - sends data as-is
 // if not defined - converts ascii -> baudot and baudot -> ascii
-#define IS_RAW
+//#define IS_RAW
 
 #ifndef IS_RAW
 #include "convert.h"
 bool tx_is_in_ltrs = true;
+bool rx_is_in_ltrs = true;
 #endif
 
 pt ptTXThread;
 pt ptRXThread;
-CircularBuffer<char, 16> queue;
+CircularBuffer<uint8_t, 64> queue;
   
 int rxThread(struct pt* pt) {
   PT_BEGIN(pt);
 
-  static char x;
+  static uint8_t x;
   static uint8_t i = 0;
 
   // Loop forever
@@ -120,25 +117,52 @@ void loop() {
                                       // 5 - can be in figures
                                       // when both 5 & 6 are zero - ignore symbol
       };
-      if( baudot & 0x80) {
+      if( baudot & SPECIAL) {
           // special treatment symbol
-          // FIXME - implement
+          baudot &= 0x1f;
+          switch(baudot){
+              case 1:   // vertical tab
+                queue.push(BAUD_SPACE);
+                queue.push(BAUD_SPACE);
+                queue.push(BAUD_SPACE);
+                queue.push(BAUD_SPACE);
+                break;
+              case 2:   // form feed
+                queue.push(BAUD_LF);
+                queue.push(BAUD_LF);
+                break;
+              case 3:   // escape
+                queue.push(BAUD_FIGS);
+                queue.push(BAUD_K_BR_L);
+                queue.push(BAUD_LTRS);
+                queue.push(BAUD_E_3);
+                queue.push(BAUD_S_APO);
+                queue.push(BAUD_C_COLO);
+                queue.push(BAUD_FIGS);
+                queue.push(BAUD_L_BR_R);
+                if(tx_is_in_ltrs) {
+                    queue.push(BAUD_LTRS);
+                };
+                break;
+              default:
+                break;
+          }
       } else {
-          uint8_t flags = (baudot & 0x60) >> 5;
+          uint8_t flags = (baudot & (CANFIG|CANLTR)) >> 5;
           if ( tx_is_in_ltrs ) {
               flags |= 0x04;
           };
           switch(flags) {
               case 0b010:       // tx = FIGS, symbol can only be in LTRS - switch
-                queue.push(LTRS);
+                queue.push(BAUD_LTRS);
                 tx_is_in_ltrs = true;
                 break;
               case 0b101:       // tx = LTRS, symbol can only be in FIGS - switch
-                queue.push(FIGS);
+                queue.push(BAUD_FIGS);
                 tx_is_in_ltrs = false;
                 break;
           }
-          if(flags & 0x3) { // not an ignore symbol
+          if(flags & ((CANFIG|CANLTR) >> 5)) { // not an ignore symbol
              queue.push(baudot);
           };
       }
