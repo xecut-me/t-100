@@ -107,13 +107,17 @@ void setup() {
       digitalWrite(LEDS[i], LOW);
   }
   Serial.begin(9600);
+#ifndef IS_RAW
+  Serial.write(XON);
+#endif
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 #ifndef IS_RAW
   digitalWrite(LEDS[BUFFER_FULL_LED],(rx_allowed)?LOW:HIGH);
-#endif 
+#endif
+
   if(Serial.available()){
     if(queue.size() >= (queue.capacity >> 1)) {
 #ifdef IS_RAW
