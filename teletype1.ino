@@ -70,7 +70,7 @@ int txThread(struct pt* pt) {
   for(;;) {
     PT_WAIT_UNTIL(pt, !queue.isEmpty());        // wait till there is something to send
     digitalWrite(LEDS[TTY_TX_LED], HIGH);
-    x = queue.pop();
+    x = queue.shift();
     digitalWrite(TXPIN, LOW);                   // send start bit
     PT_SLEEP(pt, HALF_BIT*2);                   //
     for(i=0b000001;i!=0b100000;i<<=1){
@@ -153,18 +153,18 @@ void loop() {
                 break;
           }
       } else {
-          uint8_t flags = (baudot & (CANFIG|CANLTR)) >> 5;
-          if ( tx_is_in_ltrs ) {
+          uint8_t flags = (baudot & (CANFIG|CANLTR)) >> 5; // 011_____ -> 0000 0011
+          if ( !tx_is_in_ltrs ) {
               flags |= 0x04;
           };
-          switch(flags) {
-              case 0b010:       // tx = FIGS, symbol can only be in LTRS - switch
-                queue.push(BAUD_LTRS);
-                tx_is_in_ltrs = true;
-                break;
-              case 0b101:       // tx = LTRS, symbol can only be in FIGS - switch
+          switch(flags) {    // !is_in_ltrs | canfig | cantrl
+              case 0b010:       // tx = LTRS, symbol can only be in FIGS - switch
                 queue.push(BAUD_FIGS);
                 tx_is_in_ltrs = false;
+                break;
+              case 0b101:       // tx = FIGS, symbol can only be in LTRS - switch
+                queue.push(BAUD_LTRS);
+                tx_is_in_ltrs = true;
                 break;
           }
           if(flags & ((CANFIG|CANLTR) >> 5)) { // not an ignore symbol
