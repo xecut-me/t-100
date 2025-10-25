@@ -18,6 +18,8 @@ const char PROGMEM LEDS[4]={A0,A1,A2,A3};
 #include "convert.h"
 bool tx_is_in_ltrs = true;
 bool rx_is_in_ltrs = true;
+
+bool rx_allowed = true; // buffer is not full
 #endif
 
 pt ptTXThread;
@@ -68,6 +70,12 @@ int txThread(struct pt* pt) {
 
   // Loop forever
   for(;;) {
+#ifndef IS_RAW
+    if(queue.isEmpty() && !rx_allowed) {
+        Serial.write(XON);
+        rx_allowed = true;
+    };
+#endif
     PT_WAIT_UNTIL(pt, !queue.isEmpty());        // wait till there is something to send
     digitalWrite(LEDS[TTY_TX_LED], HIGH);
     x = queue.shift();
@@ -103,9 +111,17 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+#ifndef IS_RAW
+  digitalWrite(LEDS[BUFFER_FULL_LED],(rx_allowed)?LOW:HIGH);
+#endif 
   if(Serial.available()){
-    if(queue.isFull()) {
-      Serial.write("Overflow!"); // FIXME: add xon/xoff flow control
+    if(queue.size() >= (queue.capacity >> 1)) {
+#ifdef IS_RAW
+      Serial.write("Overflow!");
+#else
+      Serial.write(XOFF);
+      rx_allowed = false;
+#endif // IS_RAW
     }else{
       uint8_t ascii = Serial.read();
 #ifdef IS_RAW

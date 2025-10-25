@@ -42,6 +42,9 @@
 #define CANFIG      0b01000000
 #define CANLTR      0b00100000
 
+#define XON         17
+#define XOFF        19
+
 const uint8_t ascii2baudot[128] PROGMEM = 
 { 
     CANFIG|CANLTR|0, //  , hex: 0x00
