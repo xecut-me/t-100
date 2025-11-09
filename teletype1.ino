@@ -12,7 +12,7 @@ const char PROGMEM LEDS[4] = {A0, A1, A2, A3};
 
 // if defined - sends data as-is
 // if not defined - converts ascii -> baudot and baudot -> ascii
-//#define IS_RAW
+// #define IS_RAW
 
 #ifndef IS_RAW
 #include "convert.h"
@@ -34,20 +34,23 @@ int rxThread(struct pt *pt) {
 
   // Loop forever
   for (;;) {
-    PT_WAIT_UNTIL(
-        pt, digitalRead(RXPIN) ==
-                HIGH); // wait for --+       to indicate start bit (this pair
-                       // prevents freerunning zeroes reading on broken loop)
-    PT_WAIT_UNTIL(pt, digitalRead(RXPIN) == LOW); //            +----
+    // wait for --+
+    //            +----
+    // to indicate start bit (this pair prevents freerunning zeroes reading on
+    // broken loop)
+    PT_WAIT_UNTIL(pt, digitalRead(RXPIN) == HIGH);
+    PT_WAIT_UNTIL(pt, digitalRead(RXPIN) == LOW);
     digitalWrite(LEDS[TTY_RX_LED], HIGH);
     PT_SLEEP(pt, HALF_BIT); // sleep till the middle of start bit (10 ms)
     x = 0;
     for (i = 0b000001; i != 0b100000; i <<= 1) {
-      PT_SLEEP(pt, HALF_BIT * 2);       // wait till next bit
-      if (digitalRead(RXPIN) == HIGH) { // 1  ---+  +--+--+--+--+--+---
-        x = x | i; //       |S | 0| 1| 2| 3| 4|STP    - bits are 20ms, stop bit
-                   //       - 30ms
-      };           //       +--+--+--+--+--+--+
+      PT_SLEEP(pt, HALF_BIT * 2); // wait till next bit
+      // 1  ---+  +--+--+--+--+--+---
+      //       |S | 0| 1| 2| 3| 4|STP    - bits are 20ms, stop bit - 30 ms
+      //       +--+--+--+--+--+--+
+      if (digitalRead(RXPIN) == HIGH) {
+        x = x | i;
+      };
     }
     PT_SLEEP(pt, HALF_BIT * 4); // 1.5 stop bits ( 0.5 bit forward from last bit
                                 // + 1.5 bits of stop)
