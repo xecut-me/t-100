@@ -1,10 +1,18 @@
 # Siemens Teleprinter 100
 
-<img src="./main.jpg" width="100%"/>
+<img src="./documentation/main.jpg" width="100%"/>
 
 Это [телетайп](https://ru.wikipedia.org/wiki/%D0%A2%D0%B5%D0%BB%D0%B5%D1%82%D0%B0%D0%B9%D0%BF) 1963 года, который мы купили и поставили в хакспейсе. Кстати tty в линуксе берется именно отсюда.
 
 Суть телетайпа в том, что это как печатная машинка, но подключенная по телеграфной линии. То, что печатается на клавиатуре, уходит по проводам, а то что приходит печатается на бумаге
+
+## Используемый код
+
+Используется [код Бодо ITA2](https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4_%D0%91%D0%BE%D0%B4%D0%BE#ITA2)
+
+<img src="./documentation/ITA2_orig.jpg" width="100%"/>
+
+<img src="./documentation/ITA2_translated.jpg" width="100%"/>
 
 # Режимы работы
 
@@ -40,3 +48,17 @@
 
 t100fullmanual.pdf - для человеков
 t100fullmanual.txt - OCR as is, для LLM-ок
+
+# Тематические стикеры
+
+<img src="./documentation/stickers.jpg" width="100%"/>
+
+<img src="./documentation/sticker.jpg" width="50%"/>
+
+# Фича с отправкой своего адреса
+
+Есть спец код который посылаешь 2 раза и машина печатает свой адрес
+
+Адрес кодируется вот такими пинами
+
+<img src="./documentation/code_pin.jpg" width="50%"/>
