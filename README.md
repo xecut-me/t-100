@@ -46,8 +46,8 @@
 
 # Оригинальная документация
 
-t100fullmanual.pdf - для человеков
-t100fullmanual.txt - OCR as is, для LLM-ок
+- t100fullmanual.pdf - для человеков
+- t100fullmanual.txt - OCR as is, для LLM-ок
 
 # Тематические стикеры
 
@@ -62,3 +62,8 @@ t100fullmanual.txt - OCR as is, для LLM-ок
 Адрес кодируется вот такими пинами
 
 <img src="./documentation/code_pin.jpg" width="50%"/>
+
+# Форматтеры
+
+- autopep8
+- clang format

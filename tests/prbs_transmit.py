@@ -3,6 +3,7 @@ import time
 import sys
 import os
 
+
 def prbs15_gen(seed=1):
     """
     Generator for PRBS15 sequence using a 15-bit LFSR.
@@ -15,12 +16,13 @@ def prbs15_gen(seed=1):
         bits = lfsr & 0x1f  # output least significant bit
         lfsr = ((lfsr << 1) | new_bit) & 0x7FFF  # shift and insert new bit
         yield bits
-        
+
+
 generator = prbs15_gen(seed=0x3)
 
 with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
     while True:
         i = next(generator)
         stdout.write(i.to_bytes(1))
-        stdout.flush()    
+        stdout.flush()
         time.sleep(0.2)
