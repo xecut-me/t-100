@@ -32,13 +32,17 @@
 
 ### Схема
 
-<img src="./documentation/current_loop_top.jpg" width="100%"/>
+<table width="100%">
+  <tr>
+    <td><a href="./documentation/current_loop_top.jpg"><img src="./documentation/current_loop_top.jpg" width="100%"/></a></td>
+    <td><a href="./documentation/current_loop_bottom.jpg"><img src="./documentation/current_loop_bottom.jpg" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td><a href="./documentation/arduino_top.jpg"><img src="./documentation/arduino_top.jpg" width="100%"/></a></td>
+    <td><a href="./documentation/arduino_connector.jpg"><img src="./documentation/arduino_connector.jpg" width="100%"/></a></td>
+  </tr>
+</table>
 
-<img src="./documentation/current_loop_bottom.jpg" width="100%"/>
-
-<img src="./documentation/arduino_top.jpg" width="100%"/>
-
-<img src="./documentation/arduino_connector.jpg" width="100%"/>
 
 # Схемотехника
 
