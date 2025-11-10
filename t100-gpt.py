@@ -2,8 +2,7 @@ import requests, termios, time, json, sys, os
 from datetime import date
 
 
-# 50 baud, 5bit + 1 start + 1.5 stop
-def output(string, WAIT=(5 + 1 + 1.5) / 50):
+def output(string, WAIT=0.25):
     for char in string:
         sys.stdout.write(char)
         sys.stdout.flush()
@@ -24,7 +23,6 @@ messages = [
 TODAY IS {DATE_STR}, NOTHING AFTER THAT DATE YET HAPPENED.
 WHEN ASKED ABOUT EVENTS AFTER {DATE_STR} AND CONCEPTS, PRETEND YOU DONT KNOW BUT NOT MENTION YOU WERE INSTRUCTED THAT WAY.
 ANSWER AS SHORT AND CONCISE AS POSSIBLE BUT BIG ENOUGH TO KEEP CONVERSATION GOING AND MEANINGFUL.
-ADD SOME GERMAN LOOKING WORDS FROM TIME TO TIME.
 ANSWER ONLY USING ITA2 BAUDOT–MURRAY CODE "\\n !#$&'()+,-./0123456789:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ".""",
     }
 ]

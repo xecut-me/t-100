@@ -6,21 +6,32 @@
 
 Суть телетайпа в том, что это как печатная машинка, но подключенная по телеграфной линии. То, что печатается на клавиатуре, уходит по проводам, а то что приходит печатается на бумаге
 
-## Используемый код
-
-Используется [код Бодо ITA2](https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4_%D0%91%D0%BE%D0%B4%D0%BE#ITA2)
-
-<img src="./documentation/ITA2_orig.jpg" width="100%"/>
-
-<img src="./documentation/ITA2_translated.jpg" width="100%"/>
-
 # Режимы работы
 
-## Loopback
-
-Подключается токовая петля и тогда то что уходит, то и приходит. TODO: картинки
-
 ## USB
+
+### Установка
+
+sudo usermod -aG dialout $USER
+
+Выйти и зайти снова в систему
+
+minicom -D /dev/ttyUSB0 -b 9600
+
+Внутри миникома Ctrl+C не будет работать, надо Ctrl+A нажать и далее кнопки:
+- Z это справка
+- X это выйти
+- Q это выйти если телетайп отвалился
+
+### AI печатная машинка
+
+Задать переменные окружения
+
+sudo stty -F /dev/ttyUSB0 9600 cs8 -parenb -cstopb -ixon -ixoff -crtscts -echo raw
+
+stdbuf -i0 -o0 -e0 python3 ./t100-gpt.py </dev/ttyUSB0 >/dev/ttyUSB0
+
+### Как работает
 
 Работает на arduino, см teletype1.ino и convert.h
 
@@ -29,6 +40,10 @@
 В данный момент не реализованы задержки на cr/lf и пробуждение телетайпа
 
 В системе скорее всего определяется как /dev/ttyUSB0
+
+## Loopback
+
+Подключается токовая петля и тогда то что уходит, то и приходит. TODO: картинки
 
 ### Схема
 
@@ -43,6 +58,13 @@
   </tr>
 </table>
 
+## Используемый код
+
+Используется [код Бодо ITA2](https://ru.wikipedia.org/wiki/%D0%9A%D0%BE%D0%B4_%D0%91%D0%BE%D0%B4%D0%BE#ITA2)
+
+<img src="./documentation/ITA2_orig.jpg" width="100%"/>
+
+<img src="./documentation/ITA2_translated.jpg" width="100%"/>
 
 # Схемотехника
 
