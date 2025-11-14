@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "convert.h"
+#include "arduino/convert.h"
 
 enum
 {
