@@ -25,7 +25,9 @@ minicom -D /dev/ttyUSB0 -b 9600
 
 ### AI печатная машинка
 
-Задать переменные окружения
+Задать переменные окружения LLAMA_API_URL и LLAMA_API_KEY
+
+Пример LLAMA_API_URL https://localhost:8080/v1/chat/completions
 
 sudo stty -F /dev/ttyUSB0 9600 cs8 -parenb -cstopb -ixon -ixoff -crtscts -echo raw
 
@@ -89,7 +91,12 @@ stdbuf -i0 -o0 -e0 python3 ./t100-gpt.py </dev/ttyUSB0 >/dev/ttyUSB0
 
 <img src="./documentation/code_pin.jpg" width="50%"/>
 
-# Форматтеры
+# Прочая информация
+
+1.8W raspberry
+4.2W raspberry + arduino
+
+## Форматтеры
 
 - autopep8
 - clang format
