@@ -18,6 +18,8 @@ const char PROGMEM LEDS[4] = {A0, A1, A2, A3};
 #include "convert.h"
 bool tx_is_in_ltrs = true;
 bool rx_is_in_ltrs = true;
+bool is_in_loopback = true; // teletype starts in loopback mode till first
+                            // received character from PC
 
 bool rx_allowed = true; // buffer is not full
 #endif
@@ -54,6 +56,11 @@ int rxThread(struct pt *pt) {
     }
     PT_SLEEP(pt, HALF_BIT * 4); // 1.5 stop bits ( 0.5 bit forward from last bit
                                 // + 1.5 bits of stop)
+
+    if (is_in_loopback) {
+      // while in loopback mode - just write data to the type queue
+      queue.push(x);
+    };
 #ifdef IS_RAW
     Serial.write(x);
 #else
@@ -135,6 +142,8 @@ void loop() {
 #endif // IS_RAW
     } else {
       uint8_t ascii = Serial.read();
+      // drop out of loopback mode on first received character
+      is_in_loopback = false;
 #ifdef IS_RAW
       queue.push(ascii);
 #else
