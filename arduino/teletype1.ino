@@ -4,6 +4,13 @@
 #define TXPIN 7
 #define RXPIN 6
 #define HALF_BIT 10
+
+// Delays and width
+#define LINE_WIDTH 69             // FIXME - check if it is correct
+#define CARRIAGE_RETURN_DELAY 500 // in milliseconds
+#define LINE_FEED_DELAY 500       // in milliseconds
+//
+
 const char PROGMEM LEDS[4] = {A0, A1, A2, A3};
 
 #define TTY_RX_LED 0
@@ -82,6 +89,7 @@ int txThread(struct pt *pt) {
 
   static char x;
   static uint8_t i = 0;
+  static uint8_t line_position = 0;
 
   // Loop forever
   for (;;) {
@@ -103,6 +111,25 @@ int txThread(struct pt *pt) {
     digitalWrite(TXPIN, HIGH);
     digitalWrite(LEDS[TTY_TX_LED], LOW);
     PT_SLEEP(pt, HALF_BIT * 3); // wait 1.5 bits
+    switch (x) {
+    case BAUD_CR:
+      line_position = 0;
+      PT_SLEEP(pt, CARRIAGE_RETURN_DELAY);
+      break;
+    case BAUD_LF:
+      PT_SLEEP(pt, LINE_FEED_DELAY);
+      break;
+    case BAUD_LTRS:
+    case BAUD_NULL:
+    case BAUD_FIGS:
+      break;
+    default:
+      line_position++;
+    };
+    if (line_position == LINE_WIDTH) {
+      PT_SLEEP(pt, CARRIAGE_RETURN_DELAY);
+      line_position = 0;
+    };
   }
 
   PT_END(pt);
