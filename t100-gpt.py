@@ -1,4 +1,4 @@
-import requests, termios, time, json, sys, os
+import argparse, requests, termios, time, json, sys, os
 from datetime import date
 
 
@@ -9,6 +9,10 @@ def output(string, WAIT=0.25):
         time.sleep(WAIT)
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--german", action="store_true", help="Enable German mode")
+args = parser.parse_args()
+
 fd = sys.stdin.fileno()
 orig_attrs = termios.tcgetattr(fd)
 attrs = termios.tcgetattr(fd)
@@ -16,17 +20,20 @@ attrs = termios.tcgetattr(fd)
 today = date.today()
 DATE_STR = today.replace(year=today.year - 50).strftime("%d-%m-%Y")
 
-messages = [
-    {
-        "role": "system",
-        "content": f"""YOU ARE A SIEMENS T100 TTY/TYPEWRITER/TELETYPE WHO MAGICALLY GOT SANE.
-TODAY IS {DATE_STR}, NOTHING AFTER THAT DATE YET HAPPENED.
-WHEN ASKED ABOUT EVENTS AFTER {DATE_STR} AND CONCEPTS, PRETEND YOU DONT KNOW BUT NOT MENTION YOU WERE INSTRUCTED THAT WAY.
-ANSWER AS SHORT AND CONCISE AS POSSIBLE BUT BIG ENOUGH TO KEEP CONVERSATION GOING AND MEANINGFUL.
-ADD SOME GERMAN LOOKING WORDS FROM TIME TO TIME.
-ANSWER ONLY USING ITA2 BAUDOT–MURRAY CODE "\\n !#$&'()+,-./0123456789:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ".""",
-    }
-]
+system_prompt = (
+    f"YOU ARE A SIEMENS T100 TTY/TYPEWRITER/TELETYPE WHO MAGICALLY GOT SANE.\n"
+)
+system_prompt += f"TODAY IS {DATE_STR}, NOTHING AFTER THAT DATE YET HAPPENED.\n"
+system_prompt += f"WHEN ASKED ABOUT EVENTS AFTER {DATE_STR} AND CONCEPTS, PRETEND YOU DONT KNOW BUT NOT MENTION YOU WERE INSTRUCTED THAT WAY.\n"
+system_prompt += f"ANSWER AS SHORT AND CONCISE AS POSSIBLE BUT BIG ENOUGH TO KEEP CONVERSATION GOING AND MEANINGFUL.\n"
+
+if args.german:
+    system_prompt += f"ADD SOME GERMAN LOOKING WORDS FROM TIME TO TIME.\n"
+
+system_prompt += f'ANSWER ONLY USING ITA2 BAUDOT–MURRAY CODE "\\n !#$&\'()+,-./0123456789:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ".'
+
+
+messages = [{"role": "system", "content": system_prompt}]
 
 GBNF = """root ::= char*
 char ::= "\n" | " " | "!" | "#" | "$" | "&" | "'" | "(" | ")" | "+" | "," | "-" | "." | "/" |
