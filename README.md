@@ -16,7 +16,7 @@ sudo usermod -aG dialout $USER
 
 Выйти и зайти снова в систему
 
-minicom -D /dev/ttyUSB0 -b 9600
+minicom -D /dev/ttyACM0 -b 9600
 
 Внутри миникома Ctrl+C не будет работать, надо Ctrl+A нажать и далее кнопки:
 - Z это справка
@@ -29,9 +29,9 @@ minicom -D /dev/ttyUSB0 -b 9600
 
 Пример LLAMA_API_URL https://localhost:8080/v1/chat/completions
 
-sudo stty -F /dev/ttyUSB0 9600 cs8 -parenb -cstopb -ixon -ixoff -crtscts -echo raw
+sudo stty -F /dev/ttyACM0 9600 cs8 -parenb -cstopb -ixon -ixoff -crtscts -echo raw
 
-stdbuf -i0 -o0 -e0 python3 ./t100-gpt.py </dev/ttyUSB0 >/dev/ttyUSB0
+stdbuf -i0 -o0 -e0 python3 ./t100-gpt.py </dev/ttyACM0 >/dev/ttyACM0
 
 ### Как работает
 
@@ -41,7 +41,7 @@ stdbuf -i0 -o0 -e0 python3 ./t100-gpt.py </dev/ttyUSB0 >/dev/ttyUSB0
 
 В данный момент не реализованы задержки на cr/lf и пробуждение телетайпа
 
-В системе скорее всего определяется как /dev/ttyUSB0
+В системе скорее всего определяется как /dev/ttyACM0
 
 ## Loopback
 
