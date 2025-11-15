@@ -2,6 +2,7 @@ ARDUINO_LIBS = Protothreads CircularBuffer
 ARDUINO_DIR   = /usr/share/arduino
 ARDMK_DIR     = /usr/share/arduino
 AVR_TOOLS_DIR = /
+SIZEFLAGS     = --mcu=$(MCU) --format=avr
 
 BOARD_TAG    = uno
 MONITOR_PORT = /dev/ttyUSB0
