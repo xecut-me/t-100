@@ -32,6 +32,7 @@ if args.german:
 
 system_prompt += f'ANSWER ONLY USING ITA2 BAUDOT–MURRAY CODE "\\n !#$&\'()+,-./0123456789:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ".'
 
+sys.stderr.write(f"System prompt:\n{system_prompt}\n")
 
 messages = [{"role": "system", "content": system_prompt}]
 
