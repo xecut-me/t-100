@@ -22,6 +22,8 @@ bool rx_is_in_ltrs = true;
 bool rx_allowed = true; // buffer is not full
 #endif
 
+unsigned long last_symbol_time = 0;
+
 pt ptTXThread;
 pt ptRXThread;
 CircularBuffer<uint8_t, 64> queue;
