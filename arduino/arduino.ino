@@ -1,8 +1,65 @@
 #include <CircularBuffer.hpp>
+#include <MUIU8g2.h>
+#include <U8g2lib.h>
+#include <U8x8lib.h>
+#include <WiFi.h>
+#include <Wire.h>
 #include <protothreads.h>
 
-#define TXPIN 7
-#define RXPIN 6
+#include "convert.h"
+#include "credentials.h"
+#include "gui.hpp"
+#include "types.hpp"
+
+// Subj. Basically - make that thing fully wireless.
+//
+// Firmware for ESP32, that can be connected to teletype via current loop
+// hardware.
+//
+// It should:
+//
+//    X - connect to wifi via hardcoded credentials
+//    X - get IP over dhcp
+//    X - listen on port 1337 for raw tcp connection
+//    X - when there is no connection - it should enable loopback mode on
+//        teletype (send everything that is typed on keyboard - back to
+//        teletype).
+//    X - when new connection arrives - old connection should be dropped.
+//    X - any symbols typed on teletype should go to tcp socket, and any
+//        symbols from tcp socket should go to the teletype.
+
+// connected display: 0.91" oled, 128x32 SD1306, sda - 2, scl - 3
+// resolution 16x4 symbols
+// +----------------+
+// |RX TX CONN WIFI |
+// |          STATE |
+// |192.168.001.001 |
+// |000/128 000/128 |
+// +----------------+
+// meanings:
+// RX        - inverts on received symbol
+// TX        - inverts on transmitted symbol
+// CONN|LOOP - connection to port established or loop
+//  * LOOP   - loopback mode enabled
+//  * CONN   - there is tcp connection
+// WIFI      - connection to wifi established
+// STATE     = [RAW|ASCII|PUNCH]
+//  * RAW    - data sent as is (lower 5 bits)
+//  * ASCII  - data sent converted from baudot to ascii
+//  * PUNCH  - punches received data on the punch, in 3x5 font, garbage on paper
+// 192.168.001.001 - IP of device
+// 000/128   - RX fifo state
+// 000/128   - TX fifo state
+
+U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE);
+
+// Server will listen on this port
+WiFiServer server(1337);
+
+devstatus_t current_status, old_status;
+
+#define TXPIN 0
+#define RXPIN 1
 #define HALF_BIT 10
 
 // Delays and width
@@ -10,12 +67,6 @@
 #define CARRIAGE_RETURN_DELAY 500 // in milliseconds
 #define LINE_FEED_DELAY 500       // in milliseconds
 //
-
-const char PROGMEM LEDS[4] = {A0, A1, A2, A3};
-
-#define TTY_RX_LED 0
-#define TTY_TX_LED 1
-#define BUFFER_FULL_LED 2
 
 // if defined - sends data as-is
 // if not defined - converts ascii -> baudot and baudot -> ascii
@@ -49,7 +100,6 @@ int rxThread(struct pt *pt) {
     // broken loop)
     PT_WAIT_UNTIL(pt, digitalRead(RXPIN) == HIGH);
     PT_WAIT_UNTIL(pt, digitalRead(RXPIN) == LOW);
-    digitalWrite(LEDS[TTY_RX_LED], HIGH);
     PT_SLEEP(pt, HALF_BIT); // sleep till the middle of start bit (10 ms)
     x = 0;
     for (i = 0b000001; i != 0b100000; i <<= 1) {
@@ -78,7 +128,6 @@ int rxThread(struct pt *pt) {
       Serial.write(pgm_read_byte(baudot2ascii + x));
     }
 #endif
-    digitalWrite(LEDS[TTY_RX_LED], LOW);
   }
 
   PT_END(pt);
@@ -100,7 +149,6 @@ int txThread(struct pt *pt) {
     };
 #endif
     PT_WAIT_UNTIL(pt, !queue.isEmpty()); // wait till there is something to send
-    digitalWrite(LEDS[TTY_TX_LED], HIGH);
     x = queue.shift();
     digitalWrite(TXPIN, LOW);   // send start bit
     PT_SLEEP(pt, HALF_BIT * 2); //
@@ -109,7 +157,6 @@ int txThread(struct pt *pt) {
       PT_SLEEP(pt, HALF_BIT * 2);
     }
     digitalWrite(TXPIN, HIGH);
-    digitalWrite(LEDS[TTY_TX_LED], LOW);
     PT_SLEEP(pt, HALF_BIT * 3); // wait 1.5 bits
     switch (x) {
     case BAUD_CR:
@@ -137,27 +184,56 @@ int txThread(struct pt *pt) {
 
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin(115200);
+  Wire.setPins(2, 3);
+  Wire.setClock(1000000);
+  Wire.begin();
+  u8x8.begin();
+
   PT_INIT(&ptRXThread);
   PT_INIT(&ptTXThread);
   pinMode(TXPIN, OUTPUT);
   pinMode(RXPIN, INPUT);
   digitalWrite(RXPIN, HIGH);
   digitalWrite(TXPIN, HIGH);
-  for (unsigned int i = 0; i < sizeof(LEDS) / sizeof(LEDS[0]); i++) {
-    pinMode(LEDS[i], OUTPUT);
-    digitalWrite(LEDS[i], LOW);
-  }
-  Serial.begin(9600);
-#ifndef IS_RAW
-  Serial.write(XON);
-#endif
+
+  u8x8.clear();
+  current_status.wifi_connected = true;
+  old_status.wifi_connected = false;
+  current_status.current_ip = "N/A";
+  current_status.loopback = true;
+  current_status.mode = MODE_ASCII;
+  current_status.last_rx = current_status.last_tx = millis();
+  old_status.tx_lit = old_status.rx_lit = current_status.tx_lit =
+      current_status.rx_lit = false;
+
+  // Connect to WPA2 Wi-Fi network
+  WiFi.begin(ssid, password);
+
+  /*  Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+
+    Serial.println("\nWiFi connected");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    // Start the server
+    server.begin();
+    Serial.println("Server started, listening on port 80");*/
 }
 
 void loop() {
+  auto old = millis();
+  current_status.current_ip = WiFi.localIP().toString();
+  current_status.wifi_connected = (WiFi.status() == WL_CONNECTED);
+  draw_status(&current_status, &old_status);
+  Serial.print("Draw took");
+  Serial.print(millis() - old);
+  Serial.println();
   // put your main code here, to run repeatedly:
-#ifndef IS_RAW
-  digitalWrite(LEDS[BUFFER_FULL_LED], (rx_allowed) ? LOW : HIGH);
-#endif
 
   if (Serial.available()) {
     if (queue.size() >= (queue.capacity >> 1)) {
@@ -241,4 +317,27 @@ void loop() {
   }
   PT_SCHEDULE(rxThread(&ptRXThread));
   PT_SCHEDULE(txThread(&ptTXThread));
+  // Check if a client has connected
+  /*  WiFiClient client = server.accept();
+    if (client) {
+      Serial.println("New client connected");
+      // Wait until the client sends some data
+      while (client.connected()) {
+        if (client.available()) {
+          String request = client.readStringUntil('\r');
+          Serial.print("Received request: ");
+          Serial.println(request);
+          // Reply to the client
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/plain");
+          client.println("Connection: close");
+          client.println();
+          client.println("Hello from ESP32!");
+          break;
+        }
+      }
+      delay(1);
+      client.stop();
+      Serial.println("Client disconnected");
+    }*/
 }
