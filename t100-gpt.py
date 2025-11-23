@@ -3,9 +3,10 @@ from datetime import date
 
 
 def output(string, WAIT=0.25):
-    for char in string:
-        sys.stdout.write(char)
-        sys.stdout.flush()
+    b = string.encode("utf-8")
+    for byte in b:
+        sys.stdout.buffer.write(bytes([byte]))
+        sys.stdout.buffer.flush()
         time.sleep(WAIT)
 
 
@@ -32,7 +33,7 @@ if args.german:
 
 system_prompt += f'ANSWER ONLY USING ITA2 BAUDOT–MURRAY CODE "\\n !#$&\'()+,-./0123456789:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ".'
 
-sys.stderr.write(f"System prompt:\n{system_prompt}\n")
+sys.stderr.buffer.write(f"System prompt:\n{system_prompt}\n".encode("utf-8"))
 
 messages = [{"role": "system", "content": system_prompt}]
 
@@ -54,16 +55,19 @@ try:
     while True:
         output("USER: ")
 
-        buf = ""
+        buf = b""
 
         while True:
-            ch = sys.stdin.read(1)
-            output(ch)
-            if ch == "\n":
+            ch = sys.stdin.buffer.read(1)
+            if not ch:
+                break
+            sys.stdout.buffer.write(ch)
+            sys.stdout.buffer.flush()
+            if ch == b"\n":
                 break
             buf += ch
 
-        messages += [{"role": "user", "content": buf}]
+        messages += [{"role": "user", "content": buf.decode("utf-8")}]
 
         output("AI: ")
 
