@@ -183,6 +183,7 @@ int txThread(struct pt *pt) {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  Serial1.begin(50, SERIAL_5N2, 1 /* RX */, 2 /* TX */, false /* invert */);
   Wire.setPins(2, 3);
   Wire.setClock(1000000);
   Wire.begin();
