@@ -16,6 +16,29 @@ extern U8G2_SSD1306_128X32_UNIVISION_2_HW_I2C u8g2;
 #define FONT_HEIGHT 8
 #define FONT_WIDTH 8
 
+// display layout:
+// resolution 16x4 symbols
+// +----------------+
+// |RX TX CONN WIFI |
+// |          STATE |
+// |192.168.001.001 |
+// |000/128 000/128 |
+// +----------------+
+// meanings:
+// RX        - inverts on received symbol
+// TX        - inverts on transmitted symbol
+// CONN|LOOP - connection to port established or loop
+//  * LOOP   - loopback mode enabled
+//  * CONN   - there is tcp connection
+// WIFI      - connection to wifi established
+// STATE     = [RAW|ASCII|PUNCH]
+//  * RAW    - data sent as is (lower 5 bits)
+//  * ASCII  - data sent converted from baudot to ascii
+//  * PUNCH  - punches received data on the punch, in 3x5 font, garbage on paper
+// 192.168.001.001 - IP of device
+// 000/128   - RX fifo state
+// 000/128   - TX fifo state
+
 void draw_status(devstatus_t *current_status) {
   unsigned long now = millis();
   bool rx_lit, tx_lit;
