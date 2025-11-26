@@ -26,6 +26,7 @@ typedef struct {
   bool rx_is_in_ltrs = true;
 
   uint8_t line_position; // caret position, to enable delays
+  unsigned long tx_wait_to;
 } devstatus_t;
 
 #endif // __TYPES_HPP__

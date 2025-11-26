@@ -36,24 +36,26 @@ devstatus_t current_status;
 
 #define TXPIN 0
 #define RXPIN 1
-#define HALF_BIT 10
 #define SDAPIN 2
 #define SCLPIN 3
 
 // Delays and width
-#define LINE_WIDTH 69             // FIXME - check if it is correct
-#define CARRIAGE_RETURN_DELAY 500 // in milliseconds
-#define LINE_FEED_DELAY 500       // in milliseconds
+#define LINE_WIDTH 69              // FIXME - check if it is correct
+#define CARRIAGE_RETURN_DELAY 2500 // in milliseconds
+#define LINE_FEED_DELAY 2500       // in milliseconds
 //
 
 #include "convert.h"
 
 CircularBuffer<uint8_t, 64> queue;
 
-void onReceiveTTY() {
+void handleTTYrx() {
   // process available data from Serial1
-  auto bytes = Serial1.available();
+  if (!Serial1.available()) {
+    return;
+  };
   uint8_t x = Serial1.read();
+  current_status.last_rx = millis();
   if (current_status.loopback) {
     queue.push(x);
   };
@@ -77,26 +79,36 @@ void onReceiveTTY() {
 };
 
 void handleTTYtx() {
+  if (queue.isEmpty()) {
+    return;
+  };
+  if (millis() < current_status.tx_wait_to) {
+    return;
+  }
   // send data via Serial1
   uint8_t x = queue.shift();
   Serial1.write(x);
+  current_status.last_tx = millis();
   switch (x) {
-  case BAUD_CR:
+  case BAUD_CR: {
     current_status.line_position = 0;
-    // PT_SLEEP(pt, CARRIAGE_RETURN_DELAY); // fixme
+    current_status.tx_wait_to = millis() + CARRIAGE_RETURN_DELAY;
     break;
-  case BAUD_LF:
-    // PT_SLEEP(pt, LINE_FEED_DELAY); // fixme
+  };
+  case BAUD_LF: {
+    current_status.tx_wait_to = millis() + LINE_FEED_DELAY;
     break;
+  };
   case BAUD_LTRS:
   case BAUD_NULL:
   case BAUD_FIGS:
     break;
-  default:
+  default: {
     current_status.line_position++;
   };
+  };
   if (current_status.line_position == LINE_WIDTH) {
-    // PT_SLEEP(pt, CARRIAGE_RETURN_DELAY); // fixme
+    current_status.tx_wait_to = millis() + CARRIAGE_RETURN_DELAY;
     current_status.line_position = 0;
   };
 };
@@ -104,23 +116,19 @@ void handleTTYtx() {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  Serial1.begin(50, SERIAL_5N2, TXPIN /* RX */, RXPIN /* TX */,
+  Serial1.begin(50, SERIAL_5N2, RXPIN /* RX */, TXPIN /* TX */,
                 false /* invert */);
   Wire.setPins(SDAPIN, SCLPIN);
   Wire.setClock(1000000);
   Wire.begin();
   u8g2.begin();
 
-  pinMode(TXPIN, OUTPUT);
-  pinMode(RXPIN, INPUT);
-  digitalWrite(RXPIN, HIGH);
-  digitalWrite(TXPIN, HIGH);
-
   current_status.wifi_connected = true;
   current_status.current_ip = "N/A";
   current_status.loopback = true;
   current_status.mode = MODE_ASCII;
-  current_status.last_rx = current_status.last_tx = millis();
+  current_status.tx_wait_to = current_status.last_rx = current_status.last_tx =
+      millis();
   current_status.rx_is_in_ltrs = true;
   current_status.tx_is_in_ltrs = true;
   current_status.line_position = 0;
@@ -157,25 +165,23 @@ void loop() {
   } while (u8g2.nextPage());
   // End of redraw display
 
-  if (Serial1.available()) {
-    // data from teletype available, process it
-    onReceiveTTY();
-  };
-  if (!queue.isEmpty()) {
-    // there is data in TX fifo, send it
-    handleTTYtx();
-  };
+  // if data from teletype available, process it
+  handleTTYrx();
+  // if there is data in TX fifo, send it
+  handleTTYtx();
 
   if (Serial.available()) {
     if (queue.size() >= (queue.capacity >> 1)) {
       switch (current_status.mode) {
       case MODE_RAW:
-      case MODE_PUNCH:
+      case MODE_PUNCH: {
         Serial.write("Overflow!");
         break;
-      case MODE_ASCII:
+      };
+      case MODE_ASCII: {
         Serial.write(XOFF);
         break;
+      };
       default:
         break;
       };
@@ -185,10 +191,11 @@ void loop() {
       // drop out of loopback mode on first received character
       current_status.loopback = false;
       switch (current_status.mode) {
-      case MODE_RAW:
+      case MODE_RAW: {
         queue.push(ascii);
         break;
-      case MODE_ASCII:
+      };
+      case MODE_ASCII: {
         uint8_t baudot;
         if (ascii > 127) {
           baudot = 0b00000000; // ignore symbols, with codes above 127
@@ -206,16 +213,21 @@ void loop() {
           baudot &= 0x1f;
           switch (baudot) {
           case 1: // vertical tab
+          {
             queue.push(BAUD_SPACE);
             queue.push(BAUD_SPACE);
             queue.push(BAUD_SPACE);
             queue.push(BAUD_SPACE);
             break;
+          };
           case 2: // form feed
+          {
             queue.push(BAUD_LF);
             queue.push(BAUD_LF);
             break;
+          };
           case 3: // escape
+          {
             queue.push(BAUD_FIGS);
             queue.push(BAUD_K_BR_L);
             queue.push(BAUD_LTRS);
@@ -228,8 +240,10 @@ void loop() {
               queue.push(BAUD_LTRS);
             };
             break;
-          default:
+          };
+          default: {
             break;
+          };
           }
         } else {
           uint8_t flags =
@@ -239,23 +253,30 @@ void loop() {
           };
           switch (flags) { // !is_in_ltrs | canfig | cantrl
           case 0b010:      // tx = LTRS, symbol can only be in FIGS - switch
+          {
             queue.push(BAUD_FIGS);
             current_status.tx_is_in_ltrs = false;
             break;
+          };
           case 0b101: // tx = FIGS, symbol can only be in LTRS - switch
+          {
             queue.push(BAUD_LTRS);
             current_status.tx_is_in_ltrs = true;
             break;
+          };
           }
           if (flags & ((CANFIG | CANLTR) >> 5)) { // not an ignore symbol
             queue.push(baudot);
           };
         };
         break;
-      case MODE_PUNCH:
+      };
+      case MODE_PUNCH: {
         break; // FIXME - implement font
-      default:
+      };
+      default: {
         break;
+      };
       };
     }
   }
