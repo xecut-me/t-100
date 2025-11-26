@@ -77,6 +77,8 @@ void draw_status(devstatus_t *current_status) {
   u8g2.setCursor(FONT_WIDTH * 0, FONT_HEIGHT * (2 + 1));
   u8g2.print(current_status->current_ip);
   char buffer[16];
-  snprintf(buffer, 16, "%03d/%03d %03d/%03d", 0, 16, 0, 16);
+  snprintf(buffer, 16, "%03d/%03d %03d/%03d", current_status->rx_count,
+           current_status->rx_total, current_status->tx_count,
+           current_status->tx_total);
   u8g2.drawStr(FONT_WIDTH * 0, FONT_HEIGHT * (3 + 1), buffer);
 };
