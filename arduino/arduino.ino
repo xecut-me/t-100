@@ -1,7 +1,5 @@
 #include <CircularBuffer.hpp>
-#include <MUIU8g2.h>
 #include <U8g2lib.h>
-#include <U8x8lib.h>
 #include <WiFi.h>
 #include <Wire.h>
 #include <protothreads.h>
@@ -51,12 +49,12 @@
 // 000/128   - RX fifo state
 // 000/128   - TX fifo state
 
-U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE);
+U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0);
 
 // Server will listen on this port
 WiFiServer server(1337);
 
-devstatus_t current_status, old_status;
+devstatus_t current_status;
 
 #define TXPIN 0
 #define RXPIN 1
@@ -188,7 +186,7 @@ void setup() {
   Wire.setPins(2, 3);
   Wire.setClock(1000000);
   Wire.begin();
-  u8x8.begin();
+  u8g2.begin();
 
   PT_INIT(&ptRXThread);
   PT_INIT(&ptTXThread);
@@ -197,15 +195,11 @@ void setup() {
   digitalWrite(RXPIN, HIGH);
   digitalWrite(TXPIN, HIGH);
 
-  u8x8.clear();
   current_status.wifi_connected = true;
-  old_status.wifi_connected = false;
   current_status.current_ip = "N/A";
   current_status.loopback = true;
   current_status.mode = MODE_ASCII;
   current_status.last_rx = current_status.last_tx = millis();
-  old_status.tx_lit = old_status.rx_lit = current_status.tx_lit =
-      current_status.rx_lit = false;
 
   // Connect to WPA2 Wi-Fi network
   WiFi.begin(ssid, password);
@@ -226,13 +220,17 @@ void setup() {
 }
 
 void loop() {
-  auto old = millis();
   current_status.current_ip = WiFi.localIP().toString();
   current_status.wifi_connected = (WiFi.status() == WL_CONNECTED);
-  draw_status(&current_status, &old_status);
-  Serial.print("Draw took");
-  Serial.print(millis() - old);
-  Serial.println();
+  u8g2.firstPage();
+  do {
+    auto old = millis();
+    draw_status(&current_status, &old_status);
+    Serial.print("Draw took");
+    Serial.print(millis() - old);
+    Serial.println();
+  } while (u8g2.nextPage());
+  update_status(&current_status, &old_status);
   // put your main code here, to run repeatedly:
 
   if (Serial.available()) {
