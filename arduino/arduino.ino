@@ -211,40 +211,24 @@ void loop() {
         if (baudot & SPECIAL) {
           // special treatment symbol
           baudot &= 0x1f;
-          switch (baudot) {
-          case 1: // vertical tab
-          {
-            queue.push(BAUD_SPACE);
-            queue.push(BAUD_SPACE);
-            queue.push(BAUD_SPACE);
-            queue.push(BAUD_SPACE);
-            break;
+          if (baudot >= MAX_SPECIAL) {
+            baudot = 0;
           };
-          case 2: // form feed
-          {
-            queue.push(BAUD_LF);
-            queue.push(BAUD_LF);
-            break;
+          bool has_switch = false;
+          for (auto counter = 1; counter <= special_seq[baudot][0]; counter++) {
+            uint8_t temp = special_seq[baudot][counter];
+            if ((temp == BAUD_LTRS) || (temp == BAUD_FIGS)) {
+              has_switch = true;
+            };
+            queue.push(temp);
           };
-          case 3: // escape
-          {
-            queue.push(BAUD_FIGS);
-            queue.push(BAUD_K_BR_L);
-            queue.push(BAUD_LTRS);
-            queue.push(BAUD_E_3);
-            queue.push(BAUD_S_APO);
-            queue.push(BAUD_C_COLO);
-            queue.push(BAUD_FIGS);
-            queue.push(BAUD_L_BR_R);
+          if (has_switch) {
             if (current_status.tx_is_in_ltrs) {
               queue.push(BAUD_LTRS);
+            } else {
+              queue.push(BAUD_FIGS);
             };
-            break;
           };
-          default: {
-            break;
-          };
-          }
         } else {
           uint8_t flags =
               (baudot & (CANFIG | CANLTR)) >> 5; // 011_____ -> 0000 0011

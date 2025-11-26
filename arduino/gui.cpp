@@ -2,9 +2,9 @@
 #include <U8g2lib.h>
 #include <WiFi.h>
 
-const char *RX_S = "RX";
-const char *TX_S = "TX";
-const char *TW_S = "WA";
+const char *RX_S = "Rx";
+const char *TX_S = "Tx";
+const char *TW_S = "Wa";
 const char *CONN = "CONN";
 const char *LOOP = "LOOP";
 const char *WIFI = "WiFi";
@@ -51,12 +51,16 @@ void draw_status(devstatus_t *current_status) {
   if (rx_lit) {
     u8g2.drawStr(FONT_WIDTH * 0, FONT_HEIGHT * (0 + 1), RX_S);
   }
+  u8g2.drawStr(FONT_WIDTH * 2, FONT_HEIGHT * (0 + 1),
+               (current_status->rx_is_in_ltrs ? "A" : "1"));
   if (tx_lit && !tx_wait) {
     u8g2.drawStr(FONT_WIDTH * 3, FONT_HEIGHT * (0 + 1), TX_S);
   }
   if (tx_wait) {
     u8g2.drawStr(FONT_WIDTH * 3, FONT_HEIGHT * (0 + 1), TW_S);
   }
+  u8g2.drawStr(FONT_WIDTH * 5, FONT_HEIGHT * (0 + 1),
+               (current_status->tx_is_in_ltrs ? "A" : "1"));
   if (current_status->loopback) {
     u8g2.drawStr(FONT_WIDTH * 6, FONT_HEIGHT * (0 + 1), LOOP);
   } else {

@@ -243,4 +243,13 @@ const uint8_t baudot2ascii[64] PROGMEM = {
     0,    // BAUD_LTRS    0x1f      // switch to letters
 };
 
+const uint8_t special_seq[4][10]={
+    {0,0},
+    {4, BAUD_SPACE, BAUD_SPACE, BAUD_SPACE, BAUD_SPACE, 0}, // vertical tab
+    {2, BAUD_LF, BAUD_LF, 0}, // form feed
+    {8, BAUD_FIGS, BAUD_K_BR_L, BAUD_LTRS, BAUD_E_3, BAUD_S_APO, BAUD_C_COLO, BAUD_FIGS, BAUD_L_BR_R, 0}, // escape
+};
+
+#define MAX_SPECIAL 4
+
 #endif //__CONVERT_H__
