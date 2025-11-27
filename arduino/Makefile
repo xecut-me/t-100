@@ -1,9 +1,13 @@
-ARDUINO_LIBS = Protothreads CircularBuffer
-ARDUINO_DIR   = /usr/share/arduino
-ARDMK_DIR     = /usr/share/arduino
-AVR_TOOLS_DIR = /
+# FIXME - this is preliminary version. Needs proper configurations set up
 
-BOARD_TAG    = uno
-MONITOR_PORT = /dev/ttyUSB0
+all: build
 
-include /usr/share/arduino/Arduino.mk
+build: arduino.ino types.hpp gui.hpp gui.cpp convert.h credentials.h
+	arduino-cli compile --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=no_ota,FlashSize=4M .
+
+upload: build
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:esp32c6
+
+getdeps:
+	arduino-cli core install esp32:esp32
+	arduino-cli lib install CircularBuffer U8g2
