@@ -31,6 +31,7 @@ U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0);
 
 // Server will listen on this port
 WiFiServer server(1337);
+WiFiClient currentClient;
 
 devstatus_t current_status;
 
@@ -45,9 +46,31 @@ devstatus_t current_status;
 #define LINE_FEED_DELAY 2500       // in milliseconds
 //
 
-#include "convert.h"
+CircularBuffer<uint8_t, 128> queue;
 
-CircularBuffer<uint8_t, 64> queue;
+void WiFiEvent(WiFiEvent_t event) {
+  switch (event) {
+  case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+    current_status.wifi_connected = true;
+    break;
+  case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+    WiFi.reconnect();
+    current_status.wifi_connected = false;
+    current_status.loopback = true;
+    break;
+  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+    current_status.current_ip = WiFi.localIP().toString();
+    server.begin();
+    break;
+  case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+    current_status.current_ip = "N/A";
+    current_status.loopback = true;
+    server.end();
+    break;
+  default:
+    break;
+  }
+};
 
 void handleTTYrx() {
   // process available data from Serial1
@@ -58,23 +81,24 @@ void handleTTYrx() {
   current_status.last_rx = millis();
   if (current_status.loopback) {
     queue.push(x);
-  };
-  switch (current_status.mode) {
-  case MODE_RAW:
-    Serial.write(x);
-    break;
-  case MODE_ASCII:
-    if ((x == BAUD_FIGS) || (x == BAUD_LTRS)) {
-      current_status.rx_is_in_ltrs = (x == BAUD_LTRS);
-    } else {
-      x = current_status.rx_is_in_ltrs ? (x) : (x | 0x20);
-      Serial.write(baudot2ascii[x]);
+  } else {
+    switch (current_status.mode) {
+    case MODE_RAW:
+      currentClient.write(x);
+      break;
+    case MODE_ASCII:
+      if ((x == BAUD_FIGS) || (x == BAUD_LTRS)) {
+        current_status.rx_is_in_ltrs = (x == BAUD_LTRS);
+      } else {
+        x = current_status.rx_is_in_ltrs ? (x) : (x | 0x20);
+        currentClient.write(baudot2ascii[x]);
+      };
+      break;
+    case MODE_PUNCH:
+      break; // in punch mode - ignore keyboard
+    default:
+      break;
     };
-    break;
-  case MODE_PUNCH:
-    break; // in punch mode - ignore keyboard
-  default:
-    break;
   };
 };
 
@@ -101,8 +125,9 @@ void handleTTYtx() {
   };
   case BAUD_LTRS:
   case BAUD_NULL:
-  case BAUD_FIGS:
+  case BAUD_FIGS: {
     break;
+  };
   default: {
     current_status.line_position++;
   };
@@ -123,7 +148,7 @@ void setup() {
   Wire.begin();
   u8g2.begin();
 
-  current_status.wifi_connected = true;
+  current_status.wifi_connected = false;
   current_status.current_ip = "N/A";
   current_status.loopback = true;
   current_status.mode = MODE_ASCII;
@@ -134,29 +159,23 @@ void setup() {
   current_status.line_position = 0;
 
   // Connect to WPA2 Wi-Fi network
+  WiFi.onEvent(WiFiEvent, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+  WiFi.onEvent(WiFiEvent, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  WiFi.onEvent(WiFiEvent, ARDUINO_EVENT_WIFI_STA_LOST_IP);
+  WiFi.onEvent(WiFiEvent, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.begin(ssid, password);
+  WiFi.setAutoReconnect(true);
 
-  /*  Serial.print("Connecting to WiFi");
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-    }
-
-    Serial.println("\nWiFi connected");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    // Start the server
-    server.begin();
-    Serial.println("Server started, listening on port 80");*/
+  // server.begin();
 }
 
 void loop() {
   // Update status
-  current_status.current_ip = WiFi.localIP().toString();
-  current_status.wifi_connected = (WiFi.status() == WL_CONNECTED);
+  // current_status.current_ip = WiFi.localIP().toString();
+  // current_status.wifi_connected = (WiFi.status() == WL_CONNECTED);
   current_status.rx_count = queue.size();
   current_status.rx_total = queue.capacity;
+  current_status.loopback = !(currentClient && currentClient.connected());
   // End of update status
   // Redraw display
   u8g2.firstPage();
@@ -170,24 +189,20 @@ void loop() {
   // if there is data in TX fifo, send it
   handleTTYtx();
 
-  if (Serial.available()) {
-    if (queue.size() >= (queue.capacity >> 1)) {
-      switch (current_status.mode) {
-      case MODE_RAW:
-      case MODE_PUNCH: {
-        Serial.write("Overflow!");
-        break;
-      };
-      case MODE_ASCII: {
-        Serial.write(XOFF);
-        break;
-      };
-      default:
-        break;
-      };
-      //  rx_allowed = false; // fixme
-    } else {
-      uint8_t ascii = Serial.read();
+  // handle wifi connection
+  WiFiClient newClient = server.available();
+  if (newClient) {
+    if (currentClient && currentClient.connected()) {
+      currentClient.stop(); // Disconnect previous client
+    }
+    currentClient = newClient; // Update with new client connection
+  };
+  // end handling wifi connection
+
+  if (currentClient && currentClient.connected() &&
+      ((queue.capacity - queue.size()) > 10)) {
+    {
+      uint8_t ascii = currentClient.read();
       // drop out of loopback mode on first received character
       current_status.loopback = false;
       switch (current_status.mode) {
@@ -264,27 +279,4 @@ void loop() {
       };
     }
   }
-  // Check if a client has connected
-  /*  WiFiClient client = server.accept();
-    if (client) {
-      Serial.println("New client connected");
-      // Wait until the client sends some data
-      while (client.connected()) {
-        if (client.available()) {
-          String request = client.readStringUntil('\r');
-          Serial.print("Received request: ");
-          Serial.println(request);
-          // Reply to the client
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/plain");
-          client.println("Connection: close");
-          client.println();
-          client.println("Hello from ESP32!");
-          break;
-        }
-      }
-      delay(1);
-      client.stop();
-      Serial.println("Client disconnected");
-    }*/
 }
