@@ -17,12 +17,12 @@
 //
 //    V - connect to wifi via hardcoded credentials
 //    V - get IP over dhcp
-//    X - listen on port 1337 for raw tcp connection
-//    X - when there is no connection - it should enable loopback mode on
+//    V - listen on port 1337 for raw tcp connection
+//    V - when there is no connection - it should enable loopback mode on
 //        teletype (send everything that is typed on keyboard - back to
 //        teletype).
-//    X - when new connection arrives - old connection should be dropped.
-//    X - any symbols typed on teletype should go to tcp socket, and any
+//    V - when new connection arrives - old connection should be dropped.
+//    V - any symbols typed on teletype should go to tcp socket, and any
 //        symbols from tcp socket should go to the teletype.
 
 // connected display: 0.91" oled, 128x32 SD1306, sda - 2, scl - 3
@@ -171,8 +171,6 @@ void setup() {
 
 void loop() {
   // Update status
-  // current_status.current_ip = WiFi.localIP().toString();
-  // current_status.wifi_connected = (WiFi.status() == WL_CONNECTED);
   current_status.rx_count = queue.size();
   current_status.rx_total = queue.capacity;
   current_status.loopback = !(currentClient && currentClient.connected());
@@ -202,6 +200,7 @@ void loop() {
   if (currentClient && currentClient.connected() &&
       ((queue.capacity - queue.size()) > 10)) {
     {
+      current_status.tx_count = currentClient.available();
       uint8_t ascii = currentClient.read();
       // drop out of loopback mode on first received character
       current_status.loopback = false;
@@ -265,7 +264,7 @@ void loop() {
           };
           }
           if (flags & ((CANFIG | CANLTR) >> 5)) { // not an ignore symbol
-            queue.push(baudot);
+            queue.push(baudot & 0x1f);
           };
         };
         break;
