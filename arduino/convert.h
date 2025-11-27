@@ -251,6 +251,4 @@ const uint8_t special_seq[4][10] = {
      BAUD_FIGS, BAUD_L_BR_R, 0}, // escape
 };
 
-#define MAX_SPECIAL 4
-
 #endif //__CONVERT_H__

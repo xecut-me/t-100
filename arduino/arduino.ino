@@ -225,11 +225,12 @@ void loop() {
         if (baudot & SPECIAL) {
           // special treatment symbol
           baudot &= 0x1f;
-          if (baudot >= MAX_SPECIAL) {
+          if (baudot >= (sizeof(special_seq) / sizeof(special_seq[0]))) {
             baudot = 0;
           };
           bool has_switch = false;
-          for (auto counter = 1; counter <= special_seq[baudot][0]; counter++) {
+          for (uint8_t counter = 1; counter <= special_seq[baudot][0];
+               counter++) {
             uint8_t temp = special_seq[baudot][counter];
             if ((temp == BAUD_LTRS) || (temp == BAUD_FIGS)) {
               has_switch = true;
