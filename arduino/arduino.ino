@@ -138,6 +138,14 @@ void handleTTYtx() {
   };
 };
 
+void handleNetDisconnect() {
+  // clear TX and RX buffers, reset state, send CR/LF
+  current_status.mode = MODE_ASCII;
+  queue.clear();
+  Serial1.flushInput();
+  Serial1.flush(); // this may hang
+};
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -192,6 +200,7 @@ void loop() {
   if (newClient) {
     if (currentClient && currentClient.connected()) {
       currentClient.stop(); // Disconnect previous client
+      handleNetDisconnect();
     }
     currentClient = newClient; // Update with new client connection
   };
