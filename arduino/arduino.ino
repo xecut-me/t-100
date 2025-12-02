@@ -142,8 +142,12 @@ void handleNetDisconnect() {
   // clear TX and RX buffers, reset state, send CR/LF
   current_status.mode = MODE_ASCII;
   queue.clear();
-  Serial1.flushInput();
-  Serial1.flush(); // this may hang
+  Serial1.end();
+  Serial1.begin(50, SERIAL_5N2, RXPIN /* RX */, TXPIN /* TX */,
+                false /* invert */);
+
+  queue.push(BAUD_CR);
+  queue.push(BAUD_LF);
 };
 
 void setup() {
