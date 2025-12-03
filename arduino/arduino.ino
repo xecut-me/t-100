@@ -8,23 +8,6 @@
 #include "gui.hpp"
 #include "types.hpp"
 
-// Subj. Basically - make that thing fully wireless.
-//
-// Firmware for ESP32, that can be connected to teletype via current loop
-// hardware.
-//
-// It should:
-//
-//    V - connect to wifi via hardcoded credentials
-//    V - get IP over dhcp
-//    V - listen on port 1337 for raw tcp connection
-//    V - when there is no connection - it should enable loopback mode on
-//        teletype (send everything that is typed on keyboard - back to
-//        teletype).
-//    V - when new connection arrives - old connection should be dropped.
-//    V - any symbols typed on teletype should go to tcp socket, and any
-//        symbols from tcp socket should go to the teletype.
-
 // connected display: 0.91" oled, 128x32 SD1306, sda - 2, scl - 3
 
 U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0);

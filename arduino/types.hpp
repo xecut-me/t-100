@@ -13,9 +13,7 @@ typedef struct {
                  // it returns to loopback as soon as connection is lost
   teletype_mode_t mode;
   unsigned long last_rx;
-  bool rx_lit;
   unsigned long last_tx;
-  bool tx_lit;
 
   uint8_t tx_count;
   uint8_t tx_total;
