@@ -68,10 +68,10 @@ const uint8_t ascii2baudot[128] PROGMEM = {
     0,                         //  , hex: 0x15
     0,                         //  , hex: 0x16
     0,                         //  , hex: 0x17
-    SPECIAL | 3,               //  , hex: 0x18     // ESC, replace with (ESC) ?
+    0,                         //  , hex: 0x18
     0,                         //  , hex: 0x19
     0,                         //  , hex: 0x1a
-    0,                         //  , hex: 0x1b
+    SPECIAL | 3,               //  , hex: 0x1b     // ESC, replace with (ESC) ?
     0,                         //  , hex: 0x1c
     0,                         //  , hex: 0x1d
     0,                         //  , hex: 0x1e
@@ -241,6 +241,14 @@ const uint8_t baudot2ascii[64] PROGMEM = {
     '/',  // BAUD_X_SLAS  0x1d      // X or /
     '=',  // BAUD_V_EQUA  0x1e      // V or =
     0,    // BAUD_LTRS    0x1f      // switch to letters
+};
+
+const uint8_t special_seq[4][10] = {
+    {0, 0},
+    {4, BAUD_SPACE, BAUD_SPACE, BAUD_SPACE, BAUD_SPACE, 0}, // vertical tab
+    {2, BAUD_LF, BAUD_LF, 0},                               // form feed
+    {8, BAUD_FIGS, BAUD_K_BR_L, BAUD_LTRS, BAUD_E_3, BAUD_S_APO, BAUD_C_COLO,
+     BAUD_FIGS, BAUD_L_BR_R, 0}, // escape
 };
 
 #endif //__CONVERT_H__
