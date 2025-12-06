@@ -24,9 +24,9 @@ devstatus_t current_status;
 #define SCLPIN 3
 
 // Delays and width
-#define LINE_WIDTH 69              // FIXME - check if it is correct
-#define CARRIAGE_RETURN_DELAY 2500 // in milliseconds
-#define LINE_FEED_DELAY 2500       // in milliseconds
+#define LINE_WIDTH 69             // FIXME - check if it is correct
+#define CARRIAGE_RETURN_DELAY 500 // in milliseconds
+#define LINE_FEED_DELAY 500       // in milliseconds
 //
 
 CircularBuffer<uint8_t, 128> queue;
