@@ -1,4 +1,4 @@
-# FIXME - this is preliminary version. Needs proper configurations set up
+UPLOAD_PORT=/dev/ttyACM0
 
 all: build
 
@@ -7,7 +7,7 @@ build: arduino.ino types.hpp gui.hpp gui.cpp convert.h credentials.h
 	arduino-cli compile --build-path `pwd`/build1/ --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=no_ota,FlashSize=4M .
 
 upload: build
-	arduino-cli compile --build-path `pwd`/build1/ --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=no_ota,FlashSize=4M -u -p /dev/ttyACM0 .
+	arduino-cli compile --build-path `pwd`/build1/ --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=no_ota,FlashSize=4M -u -p $(UPLOAD_PORT)
 
 getdeps:
 	arduino-cli core install esp32:esp32
