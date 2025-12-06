@@ -94,3 +94,12 @@ void draw_status(devstatus_t *current_status) {
            current_status->tx_total);
   u8g2.drawStr(FONT_WIDTH * 0, FONT_HEIGHT * (3 + 1), buffer);
 };
+
+void handlegui(devstatus_t *current_status) {
+  static bool lastpage = true;
+  if (lastpage) {
+    u8g2.firstPage();
+  };
+  draw_status(current_status);
+  lastpage = !u8g2.nextPage();
+};

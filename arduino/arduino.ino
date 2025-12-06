@@ -171,10 +171,7 @@ void loop() {
   current_status.loopback = !(currentClient && currentClient.connected());
   // End of update status
   // Redraw display
-  u8g2.firstPage();
-  do {
-    draw_status(&current_status);
-  } while (u8g2.nextPage());
+  handlegui(&current_status);
   // End of redraw display
 
   // if data from teletype available, process it

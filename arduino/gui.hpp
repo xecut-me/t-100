@@ -3,6 +3,6 @@
 
 #include "types.hpp"
 
-void draw_status(devstatus_t *current_status);
+void handlegui(devstatus_t *current_status);
 
 #endif // __GUI_HPP__
