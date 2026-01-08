@@ -1,16 +1,20 @@
-UPLOAD_PORT=/dev/ttyACM0
+UPLOAD_PORT=/dev/ttyACM3
+BUILDPATH=build1
+BOARD=esp32:esp32:esp32c6
+OPTIONS_PART=min_spiffs
+FLASH_SIZE=4M
 
 all: build
 
 build: arduino.ino types.hpp gui.hpp gui.cpp convert.h credentials.h
-	mkdir -p build1
-	arduino-cli compile --build-path `pwd`/build1/ --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=min_spiffs,FlashSize=4M .
+	mkdir -p $(BUILDPATH)
+	arduino-cli compile -v -j `nproc` --build-path `pwd`/$(BUILDPATH) --fqbn $(BOARD) --board-options PartitionScheme=$(OPTIONS_PART),FlashSize=$(FLASH_SIZE) .
 
 upload: build
-	arduino-cli compile --build-path `pwd`/build1/ --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=min_spiffs,FlashSize=4M -u -p $(UPLOAD_PORT)
+	arduino-cli compile -j `nproc` --build-path `pwd`/$(BUILDPATH) --fqbn $(BOARD) --board-options PartitionScheme=$(OPTIONS_PART),FlashSize=$(FLASH_SIZE) -u -p $(UPLOAD_PORT)
 
 uploadnet: build
-	arduino-cli compile --build-path `pwd`/build1/ --fqbn esp32:esp32:esp32c6 --board-options PartitionScheme=min_spiffs,FlashSize=4M,ip=192.168.10.55 -u --port "192.168.10.55" --protocol network
+	arduino-cli compile -j `nproc` --build-path `pwd`/$(BUILDPATH) --fqbn $(BOARD) --board-options PartitionScheme=$(OPTIONS_PART),FlashSize=$(FLASH_SIZE),ip=192.168.10.55 -u --port "192.168.10.55" --protocol network
 
 getdeps:
 	arduino-cli core install esp32:esp32
