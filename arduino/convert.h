@@ -1,6 +1,8 @@
 #ifndef __CONVERT_H__
 #define __CONVERT_H__
 
+#include <stdint.h>
+
 #define BAUD_NULL 0x00    // Null symbol
 #define BAUD_E_3 0x01     // E or 3
 #define BAUD_LF 0x02      // line feed
@@ -43,7 +45,7 @@
 #define XON 17
 #define XOFF 19
 
-const uint8_t ascii2baudot[128] PROGMEM = {
+const uint8_t ascii2baudot[128]  = {
     CANFIG | CANLTR | 0,       //  , hex: 0x00
     0,                         //  , hex: 0x01
     0,                         //  , hex: 0x02
@@ -175,7 +177,7 @@ const uint8_t ascii2baudot[128] PROGMEM = {
 };
 
 // lower part - LTRS, upper part - FIGS
-const uint8_t baudot2ascii[64] PROGMEM = {
+const uint8_t baudot2ascii[64]  = {
     0,    // BAUD_NULL    0x00      // Null symbol
     'E',  // BAUD_E_3     0x01      // E or 3
     '\n', // BAUD_LF      0x02      // line feed

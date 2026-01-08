@@ -7,8 +7,10 @@
 #define LINE_FEED_DELAY 500       // in milliseconds
 //
 
+#include <stdint.h>
+
 void handleTTYtx();
 void handleTTYrx();
-void handleNetworkRX(uint8_t byte);
+void handleNetworkRX(uint8_t ascii);
 
 #endif // __SERIAL_HPP__
