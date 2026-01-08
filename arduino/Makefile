@@ -6,7 +6,7 @@ FLASH_SIZE=4M
 
 all: build
 
-build: arduino.ino types.hpp gui.hpp gui.cpp convert.h credentials.h
+build: arduino.ino types.hpp gui.hpp gui.cpp convert.h credentials.h serial.hpp serial.cpp
 	mkdir -p $(BUILDPATH)
 	arduino-cli compile -v -j `nproc` --build-path `pwd`/$(BUILDPATH) --fqbn $(BOARD) --board-options PartitionScheme=$(OPTIONS_PART),FlashSize=$(FLASH_SIZE) .
 

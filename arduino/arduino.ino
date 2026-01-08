@@ -1,5 +1,4 @@
 #include <CircularBuffer.hpp>
-#include <ArduinoOTA.h>
 #include <U8g2lib.h>
 #include <WiFi.h>
 #include <Wire.h>
@@ -7,6 +6,7 @@
 #include "convert.h"
 #include "credentials.h"
 #include "gui.hpp"
+#include "serial.hpp"
 #include "types.hpp"
 
 // connected display: 0.91" oled, 128x32 SD1306, sda - 2, scl - 3
@@ -25,15 +25,11 @@ devstatus_t current_status;
 #define SCLPIN 3
 
 // Delays and width
-#define LINE_WIDTH 69             // FIXME - check if it is correct
-#define CARRIAGE_RETURN_DELAY 500 // in milliseconds
-#define LINE_FEED_DELAY 500       // in milliseconds
-//
+// moved to serial.hpp
 
 CircularBuffer<uint8_t, 128> queue;
 
 uint32_t last_ota_time = 0;
-
 
 void WiFiEvent(WiFiEvent_t event) {
   switch (event) {
@@ -48,7 +44,6 @@ void WiFiEvent(WiFiEvent_t event) {
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
     current_status.current_ip = WiFi.localIP().toString();
     server.begin();
-    ArduinoOTA.begin();
     break;
   case ARDUINO_EVENT_WIFI_STA_LOST_IP:
     current_status.current_ip = "N/A";
@@ -58,72 +53,6 @@ void WiFiEvent(WiFiEvent_t event) {
   default:
     break;
   }
-};
-
-void handleTTYrx() {
-  // process available data from Serial1
-  if (!Serial1.available()) {
-    return;
-  };
-  uint8_t x = Serial1.read();
-  current_status.last_rx = millis();
-  if (current_status.loopback) {
-    queue.push(x);
-  } else {
-    switch (current_status.mode) {
-    case MODE_RAW:
-      currentClient.write(x);
-      break;
-    case MODE_ASCII:
-      if ((x == BAUD_FIGS) || (x == BAUD_LTRS)) {
-        current_status.rx_is_in_ltrs = (x == BAUD_LTRS);
-      } else {
-        x = current_status.rx_is_in_ltrs ? (x) : (x | 0x20);
-        currentClient.write(baudot2ascii[x]);
-      };
-      break;
-    case MODE_PUNCH:
-      break; // in punch mode - ignore keyboard
-    default:
-      break;
-    };
-  };
-};
-
-void handleTTYtx() {
-  if (queue.isEmpty()) {
-    return;
-  };
-  if (millis() < current_status.tx_wait_to) {
-    return;
-  }
-  // send data via Serial1
-  uint8_t x = queue.shift();
-  Serial1.write(x);
-  current_status.last_tx = millis();
-  switch (x) {
-  case BAUD_CR: {
-    current_status.line_position = 0;
-    current_status.tx_wait_to = millis() + CARRIAGE_RETURN_DELAY;
-    break;
-  };
-  case BAUD_LF: {
-    current_status.tx_wait_to = millis() + LINE_FEED_DELAY;
-    break;
-  };
-  case BAUD_LTRS:
-  case BAUD_NULL:
-  case BAUD_FIGS: {
-    break;
-  };
-  default: {
-    current_status.line_position++;
-  };
-  };
-  if (current_status.line_position == LINE_WIDTH) {
-    current_status.tx_wait_to = millis() + CARRIAGE_RETURN_DELAY;
-    current_status.line_position = 0;
-  };
 };
 
 void handleNetDisconnect() {
@@ -169,42 +98,6 @@ void setup() {
   WiFi.setAutoReconnect(true);
 
   // server.begin();
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH) {
-        type = "sketch";
-      } else {  // U_SPIFFS
-        type = "filesystem";
-      }
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      if (millis() - last_ota_time > 500) {
-        Serial.printf("Progress: %u%%\n", (progress / (total / 100)));
-        last_ota_time = millis();
-      }
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) {
-        Serial.println("Auth Failed");
-      } else if (error == OTA_BEGIN_ERROR) {
-        Serial.println("Begin Failed");
-      } else if (error == OTA_CONNECT_ERROR) {
-        Serial.println("Connect Failed");
-      } else if (error == OTA_RECEIVE_ERROR) {
-        Serial.println("Receive Failed");
-      } else if (error == OTA_END_ERROR) {
-        Serial.println("End Failed");
-      }
-    });
-
 }
 
 void loop() {
@@ -213,6 +106,7 @@ void loop() {
   current_status.rx_total = queue.capacity;
   current_status.loopback = !(currentClient && currentClient.connected());
   // End of update status
+
   // Redraw display
   handlegui(&current_status);
   // End of redraw display
@@ -230,7 +124,6 @@ void loop() {
       handleNetDisconnect();
     }
     currentClient = newClient; // Update with new client connection
-//    currentClient.write("\377\375\042\377\373\001"); // telnet negotiation
   };
   // end handling wifi connection
 
@@ -241,80 +134,7 @@ void loop() {
       uint8_t ascii = currentClient.read();
       // drop out of loopback mode on first received character
       current_status.loopback = false;
-      switch (current_status.mode) {
-      case MODE_RAW: {
-        queue.push(ascii);
-        break;
-      };
-      case MODE_ASCII: {
-        uint8_t baudot;
-        if (ascii > 127) {
-          baudot = 0b00000000; // ignore symbols, with codes above 127
-        } else {
-          baudot = ascii2baudot[ascii];
-          // perform conversion
-          // upper bits (765) - mean:
-          // 7 - special
-          // 6 - can be in letters
-          // 5 - can be in figures
-          // when both 5 & 6 are zero - ignore symbol
-        };
-        if (baudot & SPECIAL) {
-          // special treatment symbol
-          baudot &= 0x1f;
-          if (baudot >= (sizeof(special_seq) / sizeof(special_seq[0]))) {
-            baudot = 0;
-          };
-          bool has_switch = false;
-          for (uint8_t counter = 1; counter <= special_seq[baudot][0];
-               counter++) {
-            uint8_t temp = special_seq[baudot][counter];
-            if ((temp == BAUD_LTRS) || (temp == BAUD_FIGS)) {
-              has_switch = true;
-            };
-            queue.push(temp);
-          };
-          if (has_switch) {
-            if (current_status.tx_is_in_ltrs) {
-              queue.push(BAUD_LTRS);
-            } else {
-              queue.push(BAUD_FIGS);
-            };
-          };
-        } else {
-          uint8_t flags =
-              (baudot & (CANFIG | CANLTR)) >> 5; // 011_____ -> 0000 0011
-          if (!current_status.tx_is_in_ltrs) {
-            flags |= 0x04;
-          };
-          switch (flags) { // !is_in_ltrs | canfig | cantrl
-          case 0b010:      // tx = LTRS, symbol can only be in FIGS - switch
-          {
-            queue.push(BAUD_FIGS);
-            current_status.tx_is_in_ltrs = false;
-            break;
-          };
-          case 0b101: // tx = FIGS, symbol can only be in LTRS - switch
-          {
-            queue.push(BAUD_LTRS);
-            current_status.tx_is_in_ltrs = true;
-            break;
-          };
-          }
-          if (flags & ((CANFIG | CANLTR) >> 5)) { // not an ignore symbol
-            queue.push(baudot & 0x1f);
-          };
-        };
-        break;
-      };
-      case MODE_PUNCH: {
-        break; // FIXME - implement font
-      };
-      default: {
-        break;
-      };
-      };
+      handleNetworkRX(ascii);
     }
   }
-  ArduinoOTA.handle();
 }
