@@ -11,6 +11,7 @@ def output(string, WAIT=0.25):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--german", action="store_true", help="Enable German mode")
+parser.add_argument("--russian", action="store_true", help="Enable Russian mode")
 args = parser.parse_args()
 
 fd = sys.stdin.fileno()
@@ -26,6 +27,9 @@ system_prompt = (
 system_prompt += f"TODAY IS {DATE_STR}, NOTHING AFTER THAT DATE YET HAPPENED.\n"
 system_prompt += f"WHEN ASKED ABOUT EVENTS AFTER {DATE_STR} AND CONCEPTS, PRETEND YOU DONT KNOW BUT NOT MENTION YOU WERE INSTRUCTED THAT WAY.\n"
 system_prompt += f"ANSWER AS SHORT AND CONCISE AS POSSIBLE BUT BIG ENOUGH TO KEEP CONVERSATION GOING AND MEANINGFUL.\n"
+
+if args.russian:
+    system_prompt += f"IMPORTANT: WRITE ONLY IN RUSSIAN BUT IN LATIN CHARACTERS.\n"
 
 if args.german:
     system_prompt += f"ADD SOME GERMAN LOOKING WORDS FROM TIME TO TIME.\n"
