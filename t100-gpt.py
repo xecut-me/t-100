@@ -1,11 +1,13 @@
-import argparse, requests, termios, time, json, sys, os
+import argparse, requests, time, json, os, socket
 from datetime import date
 
+TCP_HOST = "192.168.10.124"
+TCP_PORT = 1337
 
-def output(string, WAIT=0.25):
+
+def output(string, sock, WAIT=0.25):
     for char in string:
-        sys.stdout.write(char)
-        sys.stdout.flush()
+        sock.sendall(char.encode("ascii"))
         time.sleep(WAIT)
 
 
@@ -13,10 +15,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--german", action="store_true", help="Enable German mode")
 parser.add_argument("--russian", action="store_true", help="Enable Russian mode")
 args = parser.parse_args()
-
-fd = sys.stdin.fileno()
-orig_attrs = termios.tcgetattr(fd)
-attrs = termios.tcgetattr(fd)
 
 today = date.today()
 DATE_STR = today.replace(year=today.year - 50).strftime("%d-%m-%Y")
@@ -48,27 +46,29 @@ char ::= "\n" | " " | "!" | "#" | "$" | "&" | "'" | "(" | ")" | "+" | "," | "-" 
           "U" | "V" | "W" | "X" | "Y" | "Z"
 """
 
-try:
-    attrs[3] &= ~(termios.ECHO | termios.ICANON)
-    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((TCP_HOST, TCP_PORT))
 
-    output("T100-GPT\n")
+try:
+    output("T100-GPT\n", sock)
 
     while True:
-        output("USER: ")
+        output("USER: ", sock)
 
         buf = ""
 
         while True:
-            ch = sys.stdin.read(1)
-            output(ch)
+            ch = sock.recv(1).decode("ascii")
+            if not ch:
+                raise ConnectionError("Connection closed")
+            output(ch, sock)
             if ch == "\n":
                 break
             buf += ch
 
         messages += [{"role": "user", "content": buf}]
 
-        output("AI: ")
+        output("AI: ", sock)
 
         ai_output = ""
 
@@ -104,13 +104,13 @@ try:
 
                         trimmed = True
                         ai_output += chunk
-                        output(chunk)
+                        output(chunk, sock)
                     except Exception as e:
                         pass
 
         messages += [{"role": "assistant", "content": ai_output}]
-        output("\n")
+        output("\n", sock)
 except KeyboardInterrupt:
     pass
-
-termios.tcsetattr(fd, termios.TCSANOW, orig_attrs)
+finally:
+    sock.close()
