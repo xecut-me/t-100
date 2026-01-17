@@ -8,44 +8,38 @@
 
 Maximum line length = 68 symbols
 
-# Режимы работы
+# AI печатная машинка
 
-## USB
+## Установка
 
-### Установка
+```bash
+cd server
+pip install -r requirements.txt
+curl -fsSL https://deno.land/install.sh | sh
+```
 
-sudo usermod -aG dialout $USER
+## Запуск
 
-Выйти и зайти снова в систему
+Задать переменные окружения:
+- `LLAMA_API_URL` - URL LLM API (например `https://localhost:8080/v1/chat/completions`)
+- `LLAMA_API_KEY` - ключ API
 
-minicom -D /dev/ttyACM0 -b 9600
+Запуск через сокет (подключение к телетайпу по сети):
 
-Внутри миникома Ctrl+C не будет работать, надо Ctrl+A нажать и далее кнопки:
-- Z это справка
-- X это выйти
-- Q это выйти если телетайп отвалился
+```bash
+deno run --allow-all socket_runner.ts
+```
 
-### AI печатная машинка
+## Как работает
 
-Задать переменные окружения LLAMA_API_URL и LLAMA_API_KEY
+- `server/llm_core.py` - основная логика общения с LLM, стриминг ответов посимвольно
+- `server/socket_runner.ts` - Deno скрипт для подключения к телетайпу по TCP сокету (192.168.10.124:1337)
 
-Пример LLAMA_API_URL https://localhost:8080/v1/chat/completions
+Телетайп притворяется машиной из 1970-х (дата минус 50 лет), отвечает только символами кода Бодо ITA2.
 
-sudo stty -F /dev/ttyACM0 9600 cs8 -parenb -cstopb -ixon -ixoff -crtscts -echo raw
+Команда `CLR` или `CLEAR` очищает историю диалога.
 
-stdbuf -i0 -o0 -e0 python3 ./t100-gpt.py </dev/ttyACM0 >/dev/ttyACM0
-
-### Как работает
-
-Работает на arduino, см teletype1.ino и convert.h
-
-Скорость: 9600 8n1, без flow control (TODO: сделать xon/xoff)
-
-В данный момент не реализованы задержки на cr/lf и пробуждение телетайпа
-
-В системе скорее всего определяется как /dev/ttyACM0
-
-## Loopback
+# Loopback
 
 Подключается токовая петля и тогда то что уходит, то и приходит. TODO: картинки
 
